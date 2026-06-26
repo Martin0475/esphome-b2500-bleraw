@@ -1,7 +1,9 @@
 #ifdef USE_ESP32
 
 #include <array>
+#include <cctype>
 #include <inttypes.h>
+#include <string>
 #include <utility>
 #include "b2500_base.h"
 #include "esphome/core/log.h"
@@ -23,6 +25,22 @@ auto uuid_to_log_string(const UUID &uuid, int)
 template<typename UUID>
 auto uuid_to_log_string(const UUID &uuid, long) -> decltype(uuid.to_string(), std::string()) {
   return uuid.to_string();
+}
+
+
+int hex_char_to_nibble(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  return -1;
+}
+
+bool is_hex_separator(char c) {
+  return c == ' ' || c == ':' || c == '.' || c == '-' || c == '_' || c == ',' || c == '\t' || c == '\r' ||
+         c == '\n';
 }
 
 }  // namespace
@@ -227,6 +245,51 @@ bool B2500ComponentBase::set_datetime(ESPTime datetime) {
   return true;
 }
 
+bool B2500ComponentBase::send_raw_command(const std::string &hex) {
+  std::vector<uint8_t> payload;
+  std::string digits;
+  digits.reserve(hex.size());
+
+  for (char c : hex) {
+    if (is_hex_separator(c)) {
+      continue;
+    }
+
+    if (hex_char_to_nibble(c) < 0) {
+      ESP_LOGW(TAG, "Invalid raw hex character: '%c'", c);
+      return false;
+    }
+
+    digits.push_back(c);
+  }
+
+  if (digits.empty()) {
+    ESP_LOGW(TAG, "Raw hex command is empty");
+    return false;
+  }
+
+  if ((digits.size() % 2) != 0) {
+    ESP_LOGW(TAG, "Raw hex command has odd number of hex digits");
+    return false;
+  }
+
+  if ((digits.size() / 2) > 128) {
+    ESP_LOGW(TAG, "Raw hex command too long: %u bytes", static_cast<unsigned>(digits.size() / 2));
+    return false;
+  }
+
+  payload.reserve(digits.size() / 2);
+  for (size_t i = 0; i < digits.size(); i += 2) {
+    int high = hex_char_to_nibble(digits[i]);
+    int low = hex_char_to_nibble(digits[i + 1]);
+    payload.push_back(static_cast<uint8_t>((high << 4) | low));
+  }
+
+  ESP_LOGD(TAG, "Sending raw command: %s", format_hex_pretty(payload.data(), payload.size()).c_str());
+  this->send_command(payload);
+  return true;
+}
+
 void B2500ComponentBase::update() {
   if (this->node_state == esp32_ble_tracker::ClientState::ESTABLISHED) {
     this->poll_once();
@@ -295,11 +358,15 @@ void B2500ComponentBase::send_command(std::vector<uint8_t> payload) {
     return;
   }
 
-  ESP_LOGD(TAG, "Command sent: %s", format_hex_pretty(payload.data(), payload.size()).c_str());
+  auto hex = format_hex_pretty(payload.data(), payload.size());
+  this->state_->set_last_command_data(hex);
+  ESP_LOGD(TAG, "Command sent: %s", hex.c_str());
 }
 
 void B2500ComponentBase::process_message_(uint8_t *data, uint16_t data_len) {
-  ESP_LOGD(TAG, "Received data: %s", format_hex_pretty(data, data_len).c_str());
+  auto hex = format_hex_pretty(data, data_len);
+  this->state_->set_last_response_data(hex);
+  ESP_LOGD(TAG, "Received data: %s", hex.c_str());
   auto now = this->time_->now().timestamp;
   if (!this->state_->receive_packet(data, data_len, now)) {
     ESP_LOGW(TAG, "Failed to receive packet");

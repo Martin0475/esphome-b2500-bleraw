@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <functional>
+#include <string>
 
 #include "b2500_codec.h"
 
@@ -26,9 +27,31 @@ class B2500State {
   template<typename F> void add_on_message_callback(F &&callback) {
     this->message_callback_.add(std::forward<F>(callback));
   }
+  template<typename F> void add_on_last_data_callback(F &&callback) {
+    this->last_data_callback_.add(std::forward<F>(callback));
+  }
   bool is_message_received(B2500Message message) const;
 
   time_t get_last_message_received_timestamp() const { return this->last_message_received_timestamp_; }
+
+  // Last BLE traffic
+  void set_last_command_data(const std::string &data) {
+    this->last_command_data_ = data;
+    this->last_data_callback_.call();
+  }
+
+  const std::string &get_last_command_data() const {
+    return this->last_command_data_;
+  }
+
+  void set_last_response_data(const std::string &data) {
+    this->last_response_data_ = data;
+    this->last_data_callback_.call();
+  }
+
+  const std::string &get_last_response_data() const {
+    return this->last_response_data_;
+  }
 
   // Commands
   bool set_load_first_enabled(bool state, std::vector<uint8_t> &payload);
@@ -82,7 +105,11 @@ class B2500State {
 
   time_t last_message_received_timestamp_ = 0;
 
+  std::string last_command_data_;
+  std::string last_response_data_;
+
   CallbackManager<void(B2500Message)> message_callback_{};
+  CallbackManager<void()> last_data_callback_{};
 };
 
 }  // namespace b2500

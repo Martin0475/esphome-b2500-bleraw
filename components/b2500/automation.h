@@ -61,6 +61,13 @@ template<typename... Ts> class SetDodAction : public Action<Ts...>, public Paren
   void play(const Ts &... x) override { this->parent_->set_dod(this->dod_.value(x...)); }
 };
 
+template<typename... Ts> class SendRawAction : public Action<Ts...>, public Parented<B2500ComponentBase> {
+  TEMPLATABLE_VALUE(std::string, hex)
+
+ public:
+  void play(const Ts &... x) override { this->parent_->send_raw_command(this->hex_.value(x...)); }
+};
+
 template<typename... Ts> class SetChargeModeAction : public Action<Ts...>, public Parented<B2500ComponentBase> {
   TEMPLATABLE_VALUE(std::string, charge_mode)
 

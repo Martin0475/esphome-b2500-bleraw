@@ -10,6 +10,7 @@
 
 #include <queue>
 #include <vector>
+#include <string>
 
 #include "b2500_state.h"
 
@@ -57,6 +58,7 @@ class B2500ComponentBase : public PollingComponent, public ble_client::BLEClient
                 const std::string &password);
   bool reset_mqtt();
   bool set_datetime(ESPTime datetime);
+  bool send_raw_command(const std::string &hex);
 
  protected:
   void send_command(std::vector<uint8_t> payload);

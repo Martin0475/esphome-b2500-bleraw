@@ -36,6 +36,7 @@ CONF_B2500_GENERATION = "generation"
 CONF_HOST = "host"
 CONF_SSL = "ssl"
 CONF_CHARGE_MODE = "charge_mode"
+CONF_HEX = "hex"
 CONF_ON_DEVICE_INFO = "on_device_info"
 CONF_ON_RUNTIME_INFO = "on_runtime_info"
 CONF_ON_CELL_INFO = "on_cell_info"
@@ -90,6 +91,7 @@ SetDatetimeAction = b2500_ns.class_("SetDatetimeAction", automation.Action)
 RebootAction = b2500_ns.class_("RebootAction", automation.Action)
 FactoryResetAction = b2500_ns.class_("FactoryResetAction", automation.Action)
 SetDodAction = b2500_ns.class_("SetDodAction", automation.Action)
+SendRawAction = b2500_ns.class_("SendRawAction", automation.Action)
 SetChargeModeAction = b2500_ns.class_("SetChargeModeAction", automation.Action)
 SetOutActiveAction = b2500_ns.class_("SetOutActiveAction", automation.Action)
 SetDischargeThresholdAction = b2500_ns.class_(
@@ -372,6 +374,26 @@ async def b2500_set_dod(config, action_id, template_arg, args):
 
     template_ = await cg.templatable(config["dod"], args, cg.int_)
     cg.add(action_var.set_dod(template_))
+    return action_var
+
+
+@register_action_compat(
+    "b2500.send_raw",
+    SendRawAction,
+    cv.Schema(
+        {
+            cv.Required(CONF_ID): cv.use_id(B2500ComponentBase),
+            cv.Required(CONF_HEX): cv.templatable(cv.string),
+        },
+    ),
+    synchronous=True,
+)
+async def b2500_send_raw(config, action_id, template_arg, args):
+    action_var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(action_var, config[CONF_ID])
+
+    template_ = await cg.templatable(config[CONF_HEX], args, cg.std_string)
+    cg.add(action_var.set_hex(template_))
     return action_var
 
 
