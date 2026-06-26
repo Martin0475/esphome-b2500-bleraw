@@ -18,11 +18,28 @@ void B2500TextSensor::dump_config() {
   LOG_TEXT_SENSOR("  ", "WiFi SSID", this->wifi_ssid_text_sensor_);
   LOG_TEXT_SENSOR("  ", "Scene", this->scene_text_sensor_);
   LOG_TEXT_SENSOR("  ", "Region", this->region_text_sensor_);
+  LOG_TEXT_SENSOR("  ", "Last Sent Hex", this->last_command_data_text_sensor_);
+  LOG_TEXT_SENSOR("  ", "Last Received Hex", this->last_response_data_text_sensor_);
 }
 
 void B2500TextSensor::setup() {
   ESP_LOGD(TAG, "Setting up B2500 Text Sensor...");
   this->state_->add_on_message_callback([this](B2500Message message) { this->on_message(message); });
+  this->state_->add_on_last_data_callback([this]() {
+    if (this->last_command_data_text_sensor_ != nullptr) {
+      auto last_command_data = this->state_->get_last_command_data();
+      if (this->last_command_data_text_sensor_->state != last_command_data) {
+        this->last_command_data_text_sensor_->publish_state(last_command_data);
+      }
+    }
+
+    if (this->last_response_data_text_sensor_ != nullptr) {
+      auto last_response_data = this->state_->get_last_response_data();
+      if (this->last_response_data_text_sensor_->state != last_response_data) {
+        this->last_response_data_text_sensor_->publish_state(last_response_data);
+      }
+    }
+  });
 }
 
 void B2500TextSensor::on_message(B2500Message message) {
@@ -31,6 +48,20 @@ void B2500TextSensor::on_message(B2500Message message) {
     ESPTime time = ESPTime::from_epoch_local(last_response);
     auto time_str = time.strftime("%Y-%m-%dT%H:%M:%S");
     this->last_response_text_sensor_->publish_state(time_str);
+  }
+
+  if (this->last_command_data_text_sensor_ != nullptr) {
+    auto last_command_data = this->state_->get_last_command_data();
+    if (this->last_command_data_text_sensor_->state != last_command_data) {
+      this->last_command_data_text_sensor_->publish_state(last_command_data);
+    }
+  }
+
+  if (this->last_response_data_text_sensor_ != nullptr) {
+    auto last_response_data = this->state_->get_last_response_data();
+    if (this->last_response_data_text_sensor_->state != last_response_data) {
+      this->last_response_data_text_sensor_->publish_state(last_response_data);
+    }
   }
 
   if (message == B2500_MSG_RUNTIME_INFO) {

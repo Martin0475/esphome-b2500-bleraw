@@ -24,6 +24,8 @@ class B2500TextSensor : public Component {
 
   SUB_TEXT_SENSOR(device_time)
   SUB_TEXT_SENSOR(last_response)
+  SUB_TEXT_SENSOR(last_command_data)
+  SUB_TEXT_SENSOR(last_response_data)
 
  protected:
   B2500State *state_;

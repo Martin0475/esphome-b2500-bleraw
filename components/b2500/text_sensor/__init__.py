@@ -26,6 +26,8 @@ CONF_SCENE = "scene"
 CONF_REGION = "region"
 CONF_CELL_VOLTAGE = "cell_voltage"
 CONF_LAST_RESPONSE = "last_response"
+CONF_LAST_COMMAND_DATA = "last_command_data"
+CONF_LAST_RESPONSE_DATA = "last_response_data"
 
 MARKERS: dict[str] = [
     CONF_FIRMWARE_VERSION,
@@ -39,6 +41,8 @@ MARKERS: dict[str] = [
     CONF_REGION,
     CONF_CELL_VOLTAGE,
     CONF_LAST_RESPONSE,
+    CONF_LAST_COMMAND_DATA,
+    CONF_LAST_RESPONSE_DATA,
 ]
 
 TEXT_SENSOR_BASE_SCHEMA = B2500_COMPONENT_SCHEMA.extend(
